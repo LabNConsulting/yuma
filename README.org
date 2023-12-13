@@ -1,0 +1,60 @@
+
+* README on setting up YumaWorks with RESTCONF
+
+**  Install YumaWorks on Ubuntu
+
+The following steps were taken to get minimum RESTCONF server working under
+munet on Ubuntu 22.04 using nginx.
+
+1) Install requirements (if needed)
+2) Download free version of YumaWorks pro (basic SDK) deb and install.
+
+#+begin_example
+  $ sudo apt-get install nginx fcgiwrap nginx-doc spawn-fcgi
+  $ sudo systemctl stop nginx
+  $ sudo systemctl disable nginx
+  $ adduser ywuser
+  $ passwd ywuser # [ enter "admin" ]
+  $ sudo dpkg -i yumapro-sdk-basic-22.10-11.1.u2204.amd64.deb
+#+end_example
+
+** Run
+
+#+begin_example
+  $ sudo munet
+  ...
+  munet> curl -q -s http://localhost/restconf/data/system |jq
+  ------ Host: r1 ------
+  {
+    "yuma-system:system": {
+      "sysName": "localhost",
+      "sysCurrentDateTime": "2023-12-13T13:22:31Z",
+      "sysBootDateTime": "2023-12-13T13:20:43Z",
+      "sysLogLevel": "debug",
+      ...
+#+end_example
+
+** Important File Locations:
+
+   |---------------------+-------------------------+------------------------------------|
+   | file                | inside munet            | outside of munet                   |
+   |---------------------+-------------------------+------------------------------------|
+   | base directory      | /var/log/netconfd-pro   | /tmp/munet/r1/var.log.netconfd-pro |
+   | server log          | server.log              |                                    |
+   | audit log           | audit.log               |                                    |
+   |---------------------+-------------------------+------------------------------------|
+   | base directory      | /var/lib/netconfd-pro   | ./r1/var.lib.netconfd-pro          |
+   | config file         | startup-cfg.xml         |                                    |
+   | factory config file | factory-startup-cfg.xml |                                    |
+   | transaction ID tile | startup-cfg-txid.txt    |                                    |
+   | backup config files | backups/                |                                    |
+   |---------------------+-------------------------+------------------------------------|
+   | base directory      | /var/run/netconfd-pro   | /tmp/munet/r1/var.run.netconfd-pro |
+   | PID file            | netconfd-pro.pid        |                                    |
+   | AF_LOCAL socket     | ncxserver.sock          |                                    |
+   |---------------------+-------------------------+------------------------------------|
+
+** References
+
+   - Basic Download and Install
+     https://docs.yumaworks.com/en/latest/install/restconf.html#nginx-support

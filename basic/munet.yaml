@@ -1,0 +1,78 @@
+version: 1
+topology:
+  networks-autonumber: true
+  ipv6-enable: true
+  networks:
+    - name: net0
+  nodes:
+    - name: r1
+      kind: yuma
+      connections:
+      - to: net0
+        # ip: 10.0.1.1/24
+        # name: eth0
+      cmd: |
+        # Start SSH for NETCONF use
+        # chmod 755 -R /ssh
+        rm -f /tmp/ncxserver.sock /root/.yumapro/netconfd-pro.pid
+        # if [ ! -e ../id_rsa ]; then
+        #   ssh-keygen -b 2048 -t rsa -f ../id_rsa -q -N ""
+        # fi
+        if [ ! -e ssh_host_rsa_key ]; then
+          ssh-keygen -b 2048 -t rsa -f ssh_host_rsa_key -q -N ""
+        fi
+        # printf '#!/bin/bash\ncat %RUNDIR%/../id_rsa.pub' > /ssh/akeycmd.sh
+        # chmod 755 /ssh/akeycmd.sh
+        sed "s,\$PWD,$PWD,;s,\$USER,$USER,;s,\$HOME,$HOME," %CONFIGDIR%/sshd_config.tpl > %RUNDIR%/sshd_config
+        echo -n > %RUNDIR%/sshd.log
+        /usr/sbin/sshd -f %RUNDIR%/sshd_config -E %RUNDIR%/sshd.log
+        touch %RUNDIR%/ssh-started
+
+        # Start nginx for RESTCONF
+        echo "Starting nginx"
+        nginx
+        touch %RUNDIR%/restconf-started
+
+        # Start the YumaWorks server
+        echo "Starting netconfd-pro"
+        netconfd-pro
+
+      volumes:
+        - /ssh
+
+cli:
+  commands:
+    - name: ""
+      exec": "bash -c '{}'"
+      format": "[HOST ...] sh <SHELL-COMMAND>"
+      help": "execute <SHELL-COMMAND> on hosts"
+    - name: "get"
+      exec: "bash -c 'yangcli-pro --batch-mode --run-command=\"sget {}\"'"
+      format: "get [ROUTER ...] [path]"
+      kinds: ["yuma"]
+    - name: "rc"
+      exec: "curl -q -s http://localhost/restconf/{} | jq"
+      format: "[HOST ...] rc [path]"
+      kinds: ["yuma"]
+    - name: "rc-get"
+      exec: "curl -q -s http://localhost/restconf/data{} | jq"
+      format: "[HOST ...] rc [path]"
+      kinds: ["yuma"]
+    - name: "yangcli"
+      exec: "/usr/bin/yangcli-pro"
+      format: "yangcli-pro [ROUTER ...]"
+      new-window: true
+      kinds: ["yuma"]
+
+kinds:
+  - name: yuma
+    merge: ["volumes"]
+    volumes:
+      - "./%NAME%/etc.yumapro:/etc/yumapro"
+      - "./%NAME%/etc.nginx.conf.d:/etc/nginx/conf.d"
+      - "./%NAME%/var.lib.netconfd-pro:/var/lib/netconfd-pro"
+      - "./%NAME%/var.www:/var/www"
+      - "%RUNDIR%/var.log.netconfd-pro:/var/log/netconfd-pro"
+      - "%RUNDIR%/var.log.nginx:/var/log/nginx"
+      - "%RUNDIR%/var.run.netconfd-pro:/var/run/netconfd-pro"
+      - "%RUNDIR%/var.run.nginx:/var/run/nginx"
